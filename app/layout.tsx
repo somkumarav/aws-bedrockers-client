@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Network Monitoring Dashboard",
+  title: "AutoNet",
   description: "Real-time network infrastructure monitoring and analytics",
 };
 
