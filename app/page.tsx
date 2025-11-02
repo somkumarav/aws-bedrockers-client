@@ -1,12 +1,27 @@
-'use client';
+"use client";
 
-import { useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { NetworkEvent, parseCSV } from '@/lib/csv-parser';
-import { Activity, AlertTriangle, CheckCircle, XCircle, Search, Filter } from 'lucide-react';
+import { useState, useMemo } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { NetworkEvent, parseCSV } from "@/lib/csv-parser";
+import { Search } from "lucide-react";
+import { StatisticsCard } from "@/components/statisitics-card";
+import { MarkdownViewer } from "@/components/ui/markdown-viewer";
 
 const csvData = `issue_type,probability,timestamp,tower_id,node_id,region,latency_ms,packet_loss_percent,throughput_mbps,cpu_usage_percent,memory_usage_percent,disk_io,retry_count,connection_duration_sec,error_code,status,event_type
 no_issue,0.9962864,2025-09-28T00:17:13.760655,T038,N104,South,13,0.83,141.87,12.54,54.78,820,0,4849,,degraded,congestion
@@ -37,21 +52,23 @@ no_issue,0.99667144,2025-10-08T03:25:51.760655,T020,N097,South,14,0.5,327.72,52.
 
 function getStatusBadgeVariant(status: string) {
   switch (status.toLowerCase()) {
-    case 'active':
-      return 'success';
-    case 'degraded':
-      return 'warning';
-    case 'down':
-      return 'danger';
+    case "active":
+      return "success";
+    case "degraded":
+      return "warning";
+    case "down":
+      return "danger";
     default:
-      return 'default';
+      return "default";
   }
 }
 
-function getIssueTypeBadgeVariant(issueType: string) {
-  if (issueType === 'no_issue') return 'success';
-  if (['latency_spike', 'packet_loss'].includes(issueType)) return 'warning';
-  return 'danger';
+function getIssueTypeBadgeVariant(
+  issueType: string
+): "success" | "warning" | "danger" {
+  if (issueType === "no_issue") return "success";
+  if (["latency_spike", "packet_loss"].includes(issueType)) return "warning";
+  return "danger";
 }
 
 function formatTimestamp(timestamp: string) {
@@ -67,25 +84,29 @@ export default function Home() {
     try {
       return parseCSV(csvData);
     } catch (error) {
-      console.error('Error parsing CSV:', error);
+      console.error("Error parsing CSV:", error);
       return [];
     }
   });
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [regionFilter, setRegionFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [regionFilter, setRegionFilter] = useState<string>("all");
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
-      const matchesSearch = 
+      const matchesSearch =
         event.tower_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         event.node_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         event.region.toLowerCase().includes(searchQuery.toLowerCase()) ||
         event.issue_type.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'all' || event.status.toLowerCase() === statusFilter.toLowerCase();
-      const matchesRegion = regionFilter === 'all' || event.region.toLowerCase() === regionFilter.toLowerCase();
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        event.status.toLowerCase() === statusFilter.toLowerCase();
+      const matchesRegion =
+        regionFilter === "all" ||
+        event.region.toLowerCase() === regionFilter.toLowerCase();
 
       return matchesSearch && matchesStatus && matchesRegion;
     });
@@ -93,150 +114,163 @@ export default function Home() {
 
   const stats = useMemo(() => {
     const total = events.length;
-    const active = events.filter(e => e.status.toLowerCase() === 'active').length;
-    const degraded = events.filter(e => e.status.toLowerCase() === 'degraded').length;
-    const down = events.filter(e => e.status.toLowerCase() === 'down').length;
+    const active = events.filter(
+      (e) => e.status.toLowerCase() === "active"
+    ).length;
+    const degraded = events.filter(
+      (e) => e.status.toLowerCase() === "degraded"
+    ).length;
+    const down = events.filter((e) => e.status.toLowerCase() === "down").length;
     const avgLatency = events.reduce((sum, e) => sum + e.latency_ms, 0) / total;
-    const avgThroughput = events.reduce((sum, e) => sum + e.throughput_mbps, 0) / total;
-    const issues = events.filter(e => e.issue_type !== 'no_issue').length;
+    const avgThroughput =
+      events.reduce((sum, e) => sum + e.throughput_mbps, 0) / total;
+    const issues = events.filter((e) => e.issue_type !== "no_issue").length;
 
     return { total, active, degraded, down, avgLatency, avgThroughput, issues };
   }, [events]);
 
   const uniqueRegions = useMemo(() => {
-    return Array.from(new Set(events.map(e => e.region))).sort();
+    return Array.from(new Set(events.map((e) => e.region))).sort();
   }, [events]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className='min-h-screen bg-zinc-50 dark:bg-[#0d0d0d] p-6'>
+      <div className='max-w-7xl mx-auto space-y-6'>
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className='flex items-center justify-between'>
           <div>
-            <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">Network Monitoring Dashboard</h1>
-            <p className="text-zinc-600 dark:text-zinc-400 mt-1">Real-time network infrastructure monitoring</p>
+            <h1 className='text-3xl font-bold text-zinc-900 dark:text-zinc-50'>
+              Network Monitoring Dashboard
+            </h1>
+            <p className='text-zinc-600 dark:text-zinc-400 mt-1'>
+              Real-time network infrastructure monitoring
+            </p>
           </div>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Events</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.issues} with issues detected
-              </p>
-            </CardContent>
-          </Card>
+        <div className='grid grid-cols-2 gap-4'>
+          <StatisticsCard {...stats} />
+          <div className='w-full'>
+            <Card className='w-full'>
+              <CardContent className='p-6'>
+                <MarkdownViewer
+                  className='h-[440px] overflow-y-auto'
+                  content={`# Network Anomaly Summary from CSV Data
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-              <p className="text-xs text-muted-foreground">
-                {((stats.active / stats.total) * 100).toFixed(1)}% of total
-              </p>
-            </CardContent>
-          </Card>
+## General Summary
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Degraded</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{stats.degraded}</div>
-              <p className="text-xs text-muted-foreground">
-                {((stats.degraded / stats.total) * 100).toFixed(1)}% of total
-              </p>
-            </CardContent>
-          </Card>
+The dataset contains network telemetry data with potential issues labeled in the 'issue_type' column. Most records (18 out of 24) are classified as "no_issue", indicating the network is primarily functioning normally. A few specific network anomalies have been identified.
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Down</CardTitle>
-              <XCircle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.down}</div>
-              <p className="text-xs text-muted-foreground">
-                {((stats.down / stats.total) * 100).toFixed(1)}% of total
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+## Key Network Anomalies
 
-        {/* Performance Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Average Latency</CardTitle>
-              <CardDescription>Mean latency across all nodes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stats.avgLatency.toFixed(2)} ms</div>
-            </CardContent>
-          </Card>
+### 1. **Latency Spikes**
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Average Throughput</CardTitle>
-              <CardDescription>Mean throughput across all nodes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stats.avgThroughput.toFixed(2)} Mbps</div>
-            </CardContent>
-          </Card>
+Occurrences where latency exceeded the typical range:
+- **T003 (N118 - West region) on 2025-10-19**: Latency = 503ms, Probability = 0.62
+- **T034 (N169 - North region) on 2025-10-08**: Latency = 530ms, Probability = 0.86 (most likely to indicate a real latency issue)
+
+### 2. **Resource Exhaustion**
+
+Significant high CPU and memory usage:
+- **T044 (N188 - West region) on 2025-10-25**: CPU = 96.16%, Memory = 96.09%, Throughput = 2.28Mbps, Probability = 0.41
+
+### 3. **Packet Loss**
+
+High packet loss affecting network performance:
+- **T013 (N186 - West region) on 2025-10-17**: Packet Loss = 13.47%, Throughput = 1.4Mbps, CPU = 94.24%, Memory = 98.05%, Probability = 0.78
+- **T042 (N053 - East region) on 2025-10-09**: Packet Loss = 19.86%, Probability = 0.67
+
+### 4. **Connection Drops/Outages**
+
+Events indicating potential or confirmed outages:
+- **T044 (N078 - West region) on 2025-10-07**: Probability = 0.33
+- **T014 (N040 - East region) on 2025-10-19**: Probability = 0.43
+- **T024 (N060 - North region) on 2025-10-20**: Probability = 0.64
+
+### 5. **Error Codes**
+
+Frequent error codes observed:
+- **E101**: 4 instances
+- **E202**: 5 instances
+- **E303**: 3 instances
+- **E404**: 1 instance
+- **E505**: 2 instances
+
+### 6. **Reconnection Events**
+
+Several reconnection attempts were recorded, typically linked to network degradation:
+- T003 (N118 - West region), T044 (N188 - West region), and T042 (N053 - East region) had reconnection events with high CPU/memory usage.
+
+## Regional Analysis
+
+- **West region**: Highest concentration of network issues (latency spikes, packet loss, and reconnection events).
+- **East and North regions**: Moderate issues with occasional outages.
+- **South region**: Fewer issues reported compared to other regions.
+
+## Recommendations
+
+1. **Investigate Latency Issues**: T003, T034, and other devices showing latency spikes require thorough diagnosis to avoid performance bottlenecks.
+
+2. **Manage Resource Usage**: Devices T044 (N188) and T013 (N186) show high CPU and memory usage that could lead to further issues.
+
+3. **Address Packet Loss**: T013 (N186) and T042 (N053) in the West and East regions need investigation to resolve routing or congestion problems.
+
+4. **Monitor Outages**: T044, T014, and T024 had outages or connection drops that need investigation into root causes.
+
+5. **Error Code Analysis**: E101, E202, and E303 are commonly reported errors. Consider their frequency and context to understand underlying patterns in device behavior.
+
+These findings can help network administrators prioritize remediation actions to ensure stable network performance.`}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Filters and Search */}
         <Card>
           <CardHeader>
             <CardTitle>Network Events</CardTitle>
-            <CardDescription>Monitor and filter network infrastructure events</CardDescription>
+            <CardDescription>
+              Monitor and filter network infrastructure events
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className='flex flex-col md:flex-row gap-4 mb-6'>
+              <div className='flex-1 relative'>
+                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground' />
                 <Input
-                  placeholder="Search by tower, node, region, or issue type..."
+                  placeholder='Search by tower, node, region, or issue type...'
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className='pl-10'
                 />
               </div>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className='h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
               >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="degraded">Degraded</option>
-                <option value="down">Down</option>
+                <option value='all'>All Status</option>
+                <option value='active'>Active</option>
+                <option value='degraded'>Degraded</option>
+                <option value='down'>Down</option>
               </select>
               <select
                 value={regionFilter}
                 onChange={(e) => setRegionFilter(e.target.value)}
-                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className='h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
               >
-                <option value="all">All Regions</option>
-                {uniqueRegions.map(region => (
-                  <option key={region} value={region}>{region}</option>
+                <option value='all'>All Regions</option>
+                {uniqueRegions.map((region) => (
+                  <option key={region} value={region}>
+                    {region}
+                  </option>
                 ))}
               </select>
             </div>
 
             {/* Data Table */}
-            <div className="rounded-md border">
+            <div className='rounded-md border'>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -256,36 +290,47 @@ export default function Home() {
                 <TableBody>
                   {filteredEvents.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                      <TableCell
+                        colSpan={11}
+                        className='text-center text-muted-foreground py-8'
+                      >
                         No events found matching your filters
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredEvents.map((event, index) => (
                       <TableRow key={index}>
-                        <TableCell className="font-mono text-xs">
+                        <TableCell className='font-mono text-xs'>
                           {formatTimestamp(event.timestamp)}
                         </TableCell>
                         <TableCell>{event.tower_id}</TableCell>
                         <TableCell>{event.node_id}</TableCell>
                         <TableCell>{event.region}</TableCell>
                         <TableCell>
-                          <Badge variant={getIssueTypeBadgeVariant(event.issue_type) as any}>
-                            {event.issue_type.replace(/_/g, ' ')}
+                          <Badge
+                            variant={getIssueTypeBadgeVariant(event.issue_type)}
+                          >
+                            {event.issue_type.replace(/_/g, " ")}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getStatusBadgeVariant(event.status) as any}>
+                          <Badge variant={getStatusBadgeVariant(event.status)}>
                             {event.status}
                           </Badge>
                         </TableCell>
                         <TableCell>{event.latency_ms}</TableCell>
-                        <TableCell>{event.throughput_mbps.toFixed(2)}</TableCell>
-                        <TableCell>{event.cpu_usage_percent.toFixed(2)}%</TableCell>
-                        <TableCell>{event.memory_usage_percent.toFixed(2)}%</TableCell>
+                        <TableCell>
+                          {event.throughput_mbps.toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          {event.cpu_usage_percent.toFixed(2)}%
+                        </TableCell>
+                        <TableCell>
+                          {event.memory_usage_percent.toFixed(2)}%
+                        </TableCell>
                         <TableCell>
                           {event.error_code || (
-                            <span className="text-muted-foreground">—</span>
+                            <span className='text-muted-foreground'>—</span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -294,7 +339,7 @@ export default function Home() {
                 </TableBody>
               </Table>
             </div>
-            <div className="mt-4 text-sm text-muted-foreground">
+            <div className='mt-4 text-sm text-muted-foreground'>
               Showing {filteredEvents.length} of {events.length} events
             </div>
           </CardContent>
